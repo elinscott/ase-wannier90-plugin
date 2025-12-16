@@ -1,0 +1,31 @@
+{
+  "template": "https://github.com/cthoyt/cookiecutter-snekpack",
+  "commit": "dbf60b8e03b108c7a4f2c6bdaa53a769c63d4d1c",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "package_name": "ase_wannier90_plugin",
+      "package_name_stylized": "ase-wannier90-plugin",
+      "short_description": "A plugin for the Atomic Simulation Environment for running calculations with Wannier90",
+      "author_name": "Edward Linscott",
+      "author_github": "elinscott",
+      "author_email": "edwardlinscott@gmail.com",
+      "github_organization_name": "elinscott",
+      "github_repository_name": "ase-wannier90-plugin",
+      "command_line_interface": false,
+      "gitlab": false,
+      "runner": "tox",
+      "__not_charlie": "true",
+      "__runner": "tox -e",
+      "__runner_uv": "--with tox-uv tox -e",
+      "__runner_pip": "tox tox-uv",
+      "__runner_install_uv": "uv tool install tox --with tox-uv",
+      "__runner_install_pip": "python3 -m pip install tox tox-uv",
+      "__runner_tests": "py",
+      "__gh_slug": "elinscott/ase-wannier90-plugin",
+      "_template": "https://github.com/cthoyt/cookiecutter-snekpack",
+      "_commit": "dbf60b8e03b108c7a4f2c6bdaa53a769c63d4d1c"
+    }
+  },
+  "directory": null
+}

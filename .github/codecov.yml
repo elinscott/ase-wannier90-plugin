@@ -1,0 +1,4 @@
+# see https://docs.codecov.com/v4.6/docs/codecov-yaml
+ignore:
+  - "src/ase_wannier90_plugin/__main__.py"
+  - "src/ase_wannier90_plugin/cli.py"
