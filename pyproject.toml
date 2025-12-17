@@ -116,6 +116,10 @@ release = [
 # see https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#dependencies-optional-dependencies
 # [project.optional-dependencies]
 
+# Entry points
+[project.entry-points."ase_wannier90_plugin.formats"]
+wannier90-in = "ase_wannier90_plugin.io:WANNIER90_INPUT_FORMAT"
+wannier90-out = "ase_wannier90_plugin.io:WANNIER90_OUTPUT_FORMAT"
 
 # See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#urls
 # and also https://packaging.python.org/en/latest/specifications/well-known-project-urls/
@@ -125,8 +129,6 @@ Homepage = "https://github.com/elinscott/ase-wannier90-plugin"
 Repository = "https://github.com/elinscott/ase-wannier90-plugin.git"
 Documentation = "https://ase_wannier90_plugin.readthedocs.io"
 Funding = "https://github.com/sponsors/elinscott"
-
-
 
 [tool.cruft]
 skip = [

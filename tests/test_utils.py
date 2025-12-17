@@ -1,16 +1,17 @@
 """Testing the ``ase_wannier90_plugin.utils`` module."""
 import pytest
+from typing import Any
 
 from ase_wannier90_plugin.utils import formatted_str_to_list, list_to_formatted_str, parse_value
 
 
-def test_list_to_formatted_str():
+def test_list_to_formatted_str() -> None:
     """Test the list_to_formatted_str function."""
     lst = [1, 2, 3, 5]
     formatted_str = list_to_formatted_str(lst)
     assert formatted_str == "1-3,5"
 
-def test_roundtrip():
+def test_roundtrip() -> None:
     """Test that formatting and parsing a list is reversible."""
     original_list = [1, 2, 3, 5, 7, 8, 10]
     formatted_str = list_to_formatted_str(original_list)
@@ -24,6 +25,6 @@ def test_roundtrip():
     ("42", 42),
     ("3.14", 3.14),
     ("some string", "some string")])
-def test_parse_value(input_value, expected):
+def test_parse_value(input_value: str, expected: Any) -> None:
     """Test the parse_value function."""
     assert parse_value(input_value) == expected

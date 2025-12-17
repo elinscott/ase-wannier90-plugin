@@ -1,23 +1,24 @@
 """Writing and reading functions for Wannier90."""
 
 import re
-from typing import TextIO
+from typing import TextIO, Generator
 import itertools
 import numpy as np
 
 from ase import Atoms
 from ase.cell import Cell
-from wannier90_input.projections import Projection
+from ase.calculators.calculator import Calculator
+from ase.calculators.genericfileio import BadConfiguration
+from ase.utils.plugins import ExternalIOFormat
+from wannier90_input.models.parameters import Projection
 
 from ase_wannier90_plugin.utils import list_to_formatted_str, parse_value, formatted_str_to_list
 from ase_wannier90_plugin.path import path_str_to_list, construct_kpoint_path
 
 
-def write_wannier90_in(fd: TextIO, atoms: Atoms):
+def write_wannier90_in(fd: TextIO, atoms: Atoms, **parameters) -> None:
     """Write Wannier90 input to file."""
-    settings = atoms.calc.parameters.items
-
-    for kw, opt in settings.items():
+    for kw, opt in parameters.items():
 
         if kw == 'kpoints':
             if np.ndim(opt) == 2:
@@ -33,7 +34,7 @@ def write_wannier90_in(fd: TextIO, atoms: Atoms):
             fd.write(f'{kw} = {opt_str}\n')
 
         elif kw == 'kpoint_path':
-            if settings.get('bands_plot', False):
+            if parameters.get('bands_plot', False):
                 rows_str = []
                 path_list = path_str_to_list(opt.path, opt.special_points)
                 for start, end in zip(path_list[:-1], path_list[1:]):
@@ -87,14 +88,18 @@ def read_wannier90_in(fd: TextIO) -> Atoms:
 
     Based on ase.io.castep.read_freeform
     """
+    from ase_wannier90_plugin.calculator import Wannier90, Wannier90Profile
     filelines = fd.readlines()
 
     keyw = None
     read_block = False
-    block_lines = None
+    block_lines: list[list[str]] = []
     kpoint_path = None
 
-    calc = Wannier90()
+    try:
+        calc = Wannier90()
+    except BadConfiguration:
+        calc = Wannier90(profile=Wannier90Profile(command='wannier90.x'))
 
     for i, line in enumerate(filelines):
 
@@ -152,12 +157,12 @@ def read_wannier90_in(fd: TextIO) -> Atoms:
 
     # Convert kpoint_path to a BandPath object
     if kpoint_path is not None:
-        calc.parameters.kpoint_path = construct_kpoint_path(
+        calc.parameters['kpoint_path'] = construct_kpoint_path(
             path=kpoint_path, cell=cell,
             bands_point_num=calc.parameters.get('bands_point_num', 100))
 
     atoms = Atoms(symbols=symbols, scaled_positions=scaled_positions, cell=cell, calculator=calc,
-                  tags=tags)
+                  tags=tags, pbc=True)
     atoms.calc.atoms = atoms
 
     return atoms
@@ -199,7 +204,37 @@ def _parse_kpoint_path(block_lines: list[list[str]]) -> str:
     return kpoint_path
 
 
-def read_wannier90_out(fd: TextIO | str):
+class Wannier90ResultsCalculator(Calculator):
+    """Container for Wannier90 post-processing results."""
+
+    implemented_properties = [
+        "centers",
+        "spreads",
+        "Im/Re ratio",
+        "band_structure",
+    ]
+
+    def __init__(self, atoms, **results):
+        super().__init__()
+        self.results: dict[str, Any] = {}
+        for key, value in results.items():
+            if value is None:
+                continue
+            self.results[key] = value
+        self.atoms = atoms.copy()
+    
+    def get_property(self, name: str, atoms: Atoms=None, allow_calculation: bool=True):
+        if atoms is None:
+            atoms = self.atoms
+        if name not in self.results or self.check_state(atoms):
+            if allow_calculation:
+                raise PropertyNotImplementedError(f'The property {name} is not available.')
+            return None
+        return self.results[name]
+        
+
+
+def read_wannier90_out(fd: TextIO | str) -> Generator[Atoms, None, None]:
     """Read wannier90 output files.
 
     Parameters
@@ -213,6 +248,7 @@ def read_wannier90_out(fd: TextIO | str):
         An Atoms object with an attached SinglePointCalculator containing
         any parsed results
     """
+
     if isinstance(fd, str):
         fd = open(fd)
 
@@ -220,23 +256,26 @@ def read_wannier90_out(fd: TextIO | str):
 
     job_done = False
     walltime = None
-    convergence = False
-    convergence_dis = None
+    converged = False
+    converged_dis = None
     imre_ratio: list[float] = []
     centers: list[list[float]] = []
     spreads: list[float] = []
+    nnkp_file = None
 
     for i, line in enumerate(flines):
         if 'All done' in line:
             job_done = True
         elif 'Exiting...' in line and '.nnkp written' in line:
             job_done = True
+            nnkp_file = line.split()[-2]
+            converged = None
         elif 'Wannierisation convergence criteria satisfied' in line:
-            convergence = True
+            converged = True
         elif 'DISENTANGLE' in line:
-            convergence_dis = False
+            converged_dis = False
         elif 'Disentanglement convergence criteria satisfied' in line:
-            convergence_dis = True
+            converged_dis = True
         elif 'Total Execution Time' in line or 'Time to write kmesh' in line:
             walltime = float(line.split()[-2])
         elif 'Maximum Im/Re Ratio' in line:
@@ -250,14 +289,25 @@ def read_wannier90_out(fd: TextIO | str):
                 j += 1
 
     atoms = Atoms()
-    calc = Wannier90(atoms=atoms)
-    calc.results['job done'] = job_done
+    calc = Wannier90ResultsCalculator(atoms=atoms)
+    calc.results['job_done'] = job_done
     calc.results['walltime'] = walltime
-    calc.results['convergence'] = convergence and convergence_dis in [True, None]
-    calc.results['Im/Re ratio'] = imre_ratio
+    calc.results['converged'] = converged and converged_dis in [True, None]
+    calc.results['imre_ratio'] = imre_ratio
     calc.results['centers'] = centers
     calc.results['spreads'] = spreads
+    calc.results['nnkp_file'] = nnkp_file
 
     atoms.calc = calc
 
     yield atoms
+
+WANNIER90_INPUT_FORMAT = ExternalIOFormat('Input file for Wannier90',
+                                           '1F',
+                                           module='ase_wannier90_plugin.io',
+                                           ext='.win')
+
+WANNIER90_OUTPUT_FORMAT = ExternalIOFormat('Output file for Wannier90',
+                                           '1F',
+                                           module='ase_wannier90_plugin.io',
+                                           ext='.wout')

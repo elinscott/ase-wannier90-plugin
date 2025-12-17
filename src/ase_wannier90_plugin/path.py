@@ -2,6 +2,7 @@
 
 import itertools
 import math
+from typing import Iterable
 
 from ase.cell import Cell
 from ase.dft.kpoints import BandPath, bandpath
@@ -18,7 +19,7 @@ def _path_lengths(path: str, cell: Cell, bands_point_num: int) -> list[int]:
     kpath_len: list[float] = []
     special_points = cell.bandpath().special_points
 
-    path_list = path_str_to_list(path, special_points)
+    path_list = path_str_to_list(path, special_points.keys())
 
     for i, (start, end) in enumerate(itertools.pairwise(path_list)):
         if start == ',':
@@ -35,7 +36,7 @@ def _path_lengths(path: str, cell: Cell, bands_point_num: int) -> list[int]:
     return kpath_pts
 
 
-def path_str_to_list(path: str, special_points: dict[str, str]) -> list[str]:
+def path_str_to_list(path: str, special_points: Iterable[str]) -> list[str]:
     """Break down a k-point path specified by a string into a list of special points.
 
     e.g. 'GLB1,BZGX,QFP1Z,LP' -> ['G', 'L', 'B1', ',', 'B', 'Z', 'G', 'X', ',', 'Q', 'F',
@@ -44,7 +45,7 @@ def path_str_to_list(path: str, special_points: dict[str, str]) -> list[str]:
     path_list: list[str] = []
     while len(path) > 0:
         found = False
-        for option in [*special_points.keys(), ',']:
+        for option in [*special_points, ',']:
             if path.endswith(option):
                 path = path[:-len(option)]
                 path_list.append(option)
