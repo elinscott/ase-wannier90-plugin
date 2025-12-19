@@ -138,6 +138,10 @@ skip = [
 
 # MyPy, see https://mypy.readthedocs.io/en/stable/config_file.html
 [tool.mypy]
+ignore_missing_imports = true
+strict = true
+disallow_untyped_calls = false
+allow_subclassing_any = true
 plugins = [
     "pydantic.mypy",
 ]
@@ -210,7 +214,11 @@ extend-select = [
 ignore = [
     "D105", # Missing docstring in magic method
     "E203", # Black conflicts with the following
+    "D107", # Missing docstring in __init__
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 14
 
 # See https://docs.astral.sh/ruff/settings/#per-file-ignores
 [tool.ruff.lint.per-file-ignores]

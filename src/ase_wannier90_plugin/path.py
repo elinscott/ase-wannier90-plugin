@@ -2,7 +2,7 @@
 
 import itertools
 import math
-from typing import Iterable
+from collections.abc import Iterable
 
 from ase.cell import Cell
 from ase.dft.kpoints import BandPath, bandpath
@@ -22,9 +22,9 @@ def _path_lengths(path: str, cell: Cell, bands_point_num: int) -> list[int]:
     path_list = path_str_to_list(path, special_points.keys())
 
     for i, (start, end) in enumerate(itertools.pairwise(path_list)):
-        if start == ',':
+        if start == ",":
             kpath_pts.append(0)
-        elif end == ',':
+        elif end == ",":
             kpath_pts.append(1)
         else:
             vec = special_points[end] - special_points[start]
@@ -45,14 +45,14 @@ def path_str_to_list(path: str, special_points: Iterable[str]) -> list[str]:
     path_list: list[str] = []
     while len(path) > 0:
         found = False
-        for option in [*special_points, ',']:
+        for option in [*special_points, ","]:
             if path.endswith(option):
-                path = path[:-len(option)]
+                path = path[: -len(option)]
                 path_list.append(option)
                 found = True
                 break
         if not found:
-            raise ValueError(f'Could not deconstruct {path} into individual high-symmetry points')
+            raise ValueError(f"Could not deconstruct {path} into individual high-symmetry points")
     return path_list[::-1]
 
 
@@ -65,9 +65,9 @@ def construct_kpoint_path(path: str, cell: Cell, bands_point_num: int) -> BandPa
 
     kpts = []
     for start, end, npoints in zip(path_list[:-1], path_list[1:], path_lengths, strict=True):
-        if start == ',':
+        if start == ",":
             pass
-        elif end == ',':
+        elif end == ",":
             kpts.append(special_points[start].tolist())
         else:
             bp = bandpath(start + end, cell, npoints + 1)
@@ -77,6 +77,7 @@ def construct_kpoint_path(path: str, cell: Cell, bands_point_num: int) -> BandPa
 
     if len(kpts) != sum(path_lengths) + 1:
         raise AssertionError(
-            'Did not get the expected number of kpoints; this suggests there is a bug in the code')
+            "Did not get the expected number of kpoints; this suggests there is a bug in the code"
+        )
 
     return BandPath(cell=cell, kpts=kpts, path=path, special_points=special_points)

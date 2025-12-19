@@ -38,9 +38,15 @@ Wannier90.
 
 ## 💪 Getting Started
 
-> TODO show in a very small amount of space the **MOST** useful thing your
-> package can do. Make it as short as possible! You have an entire set of docs
-> for later.
+Simply add...
+
+```python
+from ase.io.formats import register_external_io_formats
+
+register_external_io_formats('ase_wannier90_plugin.formats')
+```
+
+... to your program, and you get `wannier90.x` calculations in ASE!
 
 ## 🚀 Installation
 
